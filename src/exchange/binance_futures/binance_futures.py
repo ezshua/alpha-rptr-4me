@@ -1075,10 +1075,10 @@ class BinanceFutures:
 
                     log_metrics(datetime.utcnow(), "chaser", {
                         "side": "BUY" if self.long else "SELL",
-                        "quantity": self.qty,
-                        "start_price": self.start_price,
-                        "avg_price": avg_price,
-                        "slippage": round(slippage*100, 3)                        
+                        "quantity": float(self.qty),
+                        "start_price": float(self.start_price),
+                        "avg_price": float(avg_price),
+                        "slippage": float(round(slippage*100, 3))                        
                     },
                     {
                         "exchange": conf["args"].exchange,
@@ -2037,9 +2037,9 @@ class BinanceFutures:
 
         log_metrics(datetime.utcnow(), "margin", {
             "balance": balance,
-            "margin": balance+profit,
-            "profit": profit,
-            "pnl": pnl
+            "margin": float(balance+profit),
+            "profit": float(profit),
+            "pnl": float(pnl)
         },
         {
             "exchange": conf["args"].exchange,
@@ -2055,7 +2055,7 @@ class BinanceFutures:
         balance = self.get_balance()
         
         log_metrics(datetime.utcnow(), "margin", {
-            "balance": balance
+            "balance": float(balance)
         },
         {
             "exchange": conf["args"].exchange,
