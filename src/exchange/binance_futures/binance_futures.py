@@ -990,6 +990,13 @@ class BinanceFutures:
                     self.current_order_price = self.limit if self.limit != 0 else self.price()
                     # First order will be sent without post-only flag irrespective
                     # and post-only will be used once the order is triggered
+                    logger.info(f"--------------------------------------")
+                    logger.info(f"Chaser Order: {'Long' if self.long else 'Short'}")
+                    logger.info(f"--------------------------------------")
+                    logger.info(f"Stop: {self.stop}")
+                    logger.info(f"Limit: {self.limit}")
+                    logger.info(f"Qty: {self.qty}")
+                    logger.info(f"--------------------------------------")
                     self.order(retry_maker, 
                                self.sub_order_id(), 
                                self.long, self.qty, 
@@ -1119,15 +1126,16 @@ class BinanceFutures:
                                     # limit > cmp for long order or vice versa
                                     # and would fail if its a post-only order
                                     # Solution: retry with limit set to best bid/ask
-                                    time.sleep(1)
+                                    # time.sleep(1)
                                     ticker=exchange.get_orderbook_ticker()
-                                    limit=float(ticker["bidPrice"] if long else ticker["askPrice"])
+                                    #bumping order down the orderbook
+                                    limit=round(float(ticker["bidPrice"]) - exchange.tick_size, exchange.quote_rounding) if long else round(float(ticker["askPrice"]) + exchange.tick_size, exchange.quote_rounding)
                                     continue
                                 if (error_code == 2021):
                                     # stop < cmp for long order and vice versa
                                     # Will throw error that stop will be triggered immediately
                                     # Solution: retyr with stop = 0
-                                    time.sleep(1)
+                                    # time.sleep(1)
                                     stop=0
                                     continue
                             raise e
@@ -1151,11 +1159,13 @@ class BinanceFutures:
                     if order["status"] == "NEW":
                         logger.info(f"Chaser Event: Order Accepted - {order['id']}")
                         if self.started is None:
-                            # market order - start chasing immediately
-                            if self.stop == 0 and self.limit == 0:
+                            # market or triggered stop market order - start chasing immediately
+                            if (self.stop == 0 and self.limit == 0) or ((self.stop == self.limit) and order["stop"] == 0):
                                 self.start()
-                            # limit order - start limit tracker
-                            elif self.stop == 0 and self.limit != 0:
+                            # limit order - start limit tracker 
+                            # (handle if order was converted from stop limit to limit only 
+                            # when stop will trigger immediately)
+                            elif (self.stop == 0 or order["stop"] == 0)and self.limit != 0:
                                 self.limit_tracker(self.limit)        
                         else:
                             # new sub-order - start ob chaser
@@ -1163,11 +1173,6 @@ class BinanceFutures:
 
                     if self.stop != 0 and order["status"] == "TRIGGERED":
                         logger.info(f"Chaser Event: {order['id']} is Triggered @ {order['stop']}!")
-                        if self.limit == self.stop:
-                            # there was no limit set
-                            self.start()
-                        else:
-                            self.limit_tracker(self.limit)
                         return
 
                     if order["status"] == "FILLED":
@@ -1885,21 +1890,16 @@ class BinanceFutures:
         if(order_info['status'] == "NEW"
            or order_info['status'] == "CANCELED" 
            or order_info['status'] == "EXPIRED" 
+           or order_info['status'] == "TRIGGERED" 
            or order_info['status'] == "PARTIALLY_FILLED" 
            or order_info['status'] == "FILLED"):
             
             if(order_info['status'] == "NEW"):
+                order_log = True  
                 if all_updates:
                     callback(order_info)    
 
-            # If STOP PRICE is set for a GTC Order and filled quanitity is 0 then EXPIRED means TRIGGERED
-            # When stop price is hit, the stop order expires and converts into a limit/market order
-            if(order_info["stop"] > 0 
-               and order_info["timeinforce"] == "GTC" 
-               and order_info["filled"] == 0 
-               and order_info['status'] == "EXPIRED"):
-                
-                order_info["status"] = "TRIGGERED" 
+            if(order_info["status"] == "TRIGGERED"):
                 
                 order_log = True  
                 if all_updates:
