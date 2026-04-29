@@ -1506,10 +1506,10 @@ class Bybit:
 
                     log_metrics(datetime.utcnow(), "chaser", {
                         "side": "BUY" if self.long else "SELL",
-                        "quantity": self.qty,
-                        "start_price": self.start_price,
-                        "avg_price": avg_price,
-                        "slippage": round(slippage*100, 3)                        
+                        "quantity": float(self.qty),
+                        "start_price": float(self.start_price),
+                        "avg_price": float(avg_price),
+                        "slippage": float(round(slippage*100, 3))                        
                     },
                     {
                         "exchange": conf["args"].exchange,
@@ -2244,10 +2244,10 @@ class Bybit:
         notify(message)
         
         log_metrics(datetime.utcnow(), "margin", {
-            "balance": balance,
-            "margin": balance+pnl,
-            "profit": pnl,
-            "pnl": pnl_perc
+            "balance": float(balance),
+            "margin": float(balance+pnl),
+            "profit": float(pnl),
+            "pnl": float(pnl_perc)
         },
         {
             "exchange": conf["args"].exchange,
@@ -2263,7 +2263,7 @@ class Bybit:
         balance = self.get_balance()
 
         log_metrics(datetime.utcnow(), "margin", {
-            "balance": balance
+            "balance": float(balance)
         },
         {
             "exchange": conf["args"].exchange,

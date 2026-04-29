@@ -33,6 +33,9 @@ PRIVATE_EVENTS = (
     "ALGO_UPDATE",
 )
 
+WS_PING_INTERVAL = 90
+WS_PING_TIMEOUT = 10
+
 
 def generate_nonce():
     return int(round(time.time() * 1000))
@@ -140,7 +143,10 @@ class BinanceFuturesWs:
     def __run_socket(self, channel):
         app = self.socket_apps.get(channel)
         if app is not None:
-            app.run_forever()
+            app.run_forever(
+                ping_interval=WS_PING_INTERVAL,
+                ping_timeout=WS_PING_TIMEOUT,
+            )
 
     def __start_socket(self, channel):
         app = self.__create_socket_app(channel)
@@ -238,6 +244,12 @@ class BinanceFuturesWs:
         :param ws:
         :param message:
         """
+        is_expected_disconnect = exception.__class__.__name__ == "WebSocketConnectionClosedException"
+        if is_expected_disconnect:
+            logger.warning(f"{channel} websocket disconnected: {exception}")
+            notify(f"{channel} websocket disconnected: {exception}")
+            return
+
         logger.error(f"{channel} websocket error: {exception}")
         logger.error(traceback.format_exc())
 
