@@ -239,8 +239,10 @@ class Bybit:
             raise ValueError("Invalid or unsupported pair!")
 
         if self.quote_rounding == None or self.asset_rounding == None:      
-            markets_list = retry(lambda: self.client.get_instruments_info(category=self.category))['list']
+            markets_list = retry(lambda: self.client.get_instruments_info(category=self.category, limit=999))['list']
             market = [market for market in markets_list if market.get('symbol')==self.pair]            
+            if len(market) == 0: 
+                raise ValueError("Invalid or unsupported pair! "+self.pair)
             tick_size = float(market[0]['priceFilter']['tickSize']) * 2 \
                             if '5' in market[0]['priceFilter']['tickSize'] else market[0]['priceFilter']['tickSize']                        
             self.quote_asset = market[0]['quoteCoin']                                
